@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Repost Review Queue</title>
+<style>
+  body { font-family: -apple-system, sans-serif; background:#111; color:#eee; margin:0; padding:20px; }
+  h1 { font-size:1.4rem; }
+  .card { background:#1c1c1c; border:1px solid #333; border-radius:12px; padding:16px; margin-bottom:20px; }
+  .card img, .card video { max-width:100%; border-radius:8px; margin-bottom:12px; }
+  textarea { width:100%; min-height:100px; background:#000; color:#eee; border:1px solid #444; border-radius:8px; padding:8px; font-family:inherit; }
+  .meta { font-size:0.8rem; color:#999; margin-bottom:8px; }
+  .buttons { margin-top:10px; display:flex; gap:10px; }
+  button { padding:8px 16px; border-radius:8px; border:none; cursor:pointer; font-weight:600; }
+  .approve { background:#2ecc71; color:#000; }
+  .skip { background:#555; color:#eee; }
+  .status { font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; padding:2px 8px; border-radius:6px; }
+  .status.pending { background:#444; }
+  .status.approved { background:#2ecc71; color:#000; }
+  .note { background:#2a2200; border:1px solid #665500; padding:10px; border-radius:8px; font-size:0.85rem; margin-bottom:20px; }
+</style>
+</head>
+<body>
+<h1>Repost Review Queue</h1>
+<div class="note">
+  This page reads <code>data/drafts.json</code>. Since GitHub Pages is static,
+  clicking Approve here updates the display only — it does NOT write back to
+  the repo. To actually mark a draft approved and publish it, edit
+  <code>data/drafts.json</code> (set status to "approved") and run
+  <code>scripts/publish_post.py --shortcode &lt;code&gt;</code>, or wire this
+  button up to a small backend / GitHub API call if you want one-click approval.
+</div>
+<div id="queue"></div>
+
+<script>
+async function loadDrafts() {
+  const res = await fetch('../data/drafts.json');
+  const drafts = await res.json();
+  const queue = document.getElementById('queue');
+  queue.innerHTML = '';
+
+  const pending = drafts.filter(d => d.status !== 'published' && d.status !== 'skipped');
+
+  if (pending.length === 0) {
+    queue.innerHTML = '<p>No pending drafts.</p>';
+    return;
+  }
+
+  pending.forEach(d => {
+    const card = document.createElement('div');
+    card.className = 'card';
+
+    const mediaTag = d.is_video
+      ? `<video controls src="../${d.media_dir}/preview.mp4"></video>`
+      : `<img src="../${d.media_dir}/preview.jpg" alt="post media">`;
+
+    card.innerHTML = `
+      <div class="meta">
+        <span class="status ${d.status}">${d.status}</span>
+        &nbsp;·&nbsp; <a href="${d.post_url}" target="_blank" style="color:#6cf;">original post</a>
+        &nbsp;·&nbsp; ${d.shortcode}
+      </div>
+      ${mediaTag}
+      <label>Caption</label>
+      <textarea id="caption-${d.shortcode}">${d.generated_caption}</textarea>
+      <div class="buttons">
+        <button class="approve" onclick="markApproved('${d.shortcode}')">Approve</button>
+        <button class="skip" onclick="markSkipped('${d.shortcode}')">Skip</button>
+      </div>
+    `;
+    queue.appendChild(card);
+  });
+}
+
+function markApproved(shortcode) {
+  alert(`Marked ${shortcode} approved (locally only). Update data/drafts.json and run publish_post.py to actually publish.`);
+}
+function markSkipped(shortcode) {
+  alert(`Marked ${shortcode} skipped (locally only). Update data/drafts.json to persist this.`);
+}
+
+loadDrafts();
+</script>
+</body>
+</html>
